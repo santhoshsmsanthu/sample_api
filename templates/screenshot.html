@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Website Screenshot</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: Arial, sans-serif; background: #f4f6f8; color: #172b4d; }
+    main { max-width: 1100px; margin: 40px auto; padding: 0 20px; }
+    .card { background: white; border-radius: 10px; padding: 24px; box-shadow: 0 4px 16px rgba(0,0,0,.08); }
+    form { display: grid; grid-template-columns: minmax(220px, 1fr) 150px 120px 100px 100px; gap: 12px; }
+    label { font-size: 13px; font-weight: bold; }
+    input, select, button { width: 100%; margin-top: 6px; padding: 10px; border: 1px solid #ccd4e0; border-radius: 6px; }
+    button { border: 0; background: #0969da; color: white; font-weight: bold; cursor: pointer; }
+    button:disabled { opacity: .65; cursor: wait; }
+    #status { min-height: 24px; margin: 16px 0; color: #b42318; }
+    #preview { width: 100%; min-height: 220px; border: 1px solid #dfe4ea; border-radius: 8px; background: white; object-fit: contain; }
+    #downloadLink { display: none; margin-top: 16px; }
+    @media (max-width: 800px) { form { grid-template-columns: 1fr 1fr; } .url-field { grid-column: 1 / -1; } }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Website Screenshot</h1>
+    <div class="card">
+      <form id="screenshotForm">
+        <label class="url-field">Website URL<input id="url" name="url" type="url" placeholder="https://example.com" required></label>
+        <label>Size<select id="dimension" name="dimension"><option>1366x768</option><option>1920x1080</option><option>1366xfull</option></select></label>
+        <label>Device<select id="device" name="device"><option>desktop</option><option>mobile</option><option>tablet</option></select></label>
+        <label>Delay (ms)<input id="delay" name="delay" type="number" value="200" min="0" max="60000"></label>
+        <label><span>&nbsp;</span><button id="submitButton" type="submit">Capture</button></label>
+      </form>
+      <div id="status" role="status"></div>
+      <img id="preview" alt="Screenshot preview">
+      <a id="downloadLink"><button type="button">Download screenshot</button></a>
+    </div>
+  </main>
+  <script>
+    const form = document.getElementById('screenshotForm');
+    const status = document.getElementById('status');
+    const preview = document.getElementById('preview');
+    const downloadLink = document.getElementById('downloadLink');
+    const submitButton = document.getElementById('submitButton');
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      status.textContent = '';
+      submitButton.disabled = true;
+      const body = Object.fromEntries(new FormData(form).entries());
+      try {
+        const response = await fetch('/api/screenshot', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        const result = await response.json();
+        if (!response.ok || !result.success) throw new Error(result.error || 'Could not create screenshot.');
+        preview.src = result.screenshotUrl;
+        const params = new URLSearchParams(body);
+        downloadLink.href = '/api/screenshot/download?' + params.toString();
+        downloadLink.style.display = 'inline-block';
+      } catch (error) {
+        status.textContent = error.message;
+        preview.removeAttribute('src');
+        downloadLink.style.display = 'none';
+      } finally {
+        submitButton.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
